@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-func start(route func(router *gin.Engine)) {
+func Start(address string, debug string, route func(router *gin.Engine)) {
 	isDaemon := flag.Bool("d", false, "守护进程模式运行程序,例:yunlifang-dial -d");
 	stopDaemon := flag.Bool("stop", false, "退出守护模式程序,例:yunlifang-dial -stop");
 	flag.Parse()
@@ -26,8 +26,13 @@ func start(route func(router *gin.Engine)) {
 		}
 	}
 
+	/*默认debug模式,如果debug设置为false,则关闭debug模式*/
+	if debug == "false" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	app := gin.Default()
 	route(app)
 
-	app.Run()
+	app.Run(address)
 }
