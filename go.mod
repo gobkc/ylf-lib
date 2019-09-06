@@ -1,4 +1,4 @@
-module ylf-lib
+module github.com/gobkc/ylf-lib
 
 go 1.12
 
