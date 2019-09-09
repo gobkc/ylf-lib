@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
@@ -14,16 +15,22 @@ import (
 
 type MysqlStructure struct {
 	*sql.DB
-	Host        string
-	Port        string
-	User        string
-	Password    string
-	Database    string
-	SqlString   string
-	Param       []interface{}
-	Rows        *sql.Rows
-	Err         error
-	Transaction *sql.Tx
+	Host         string
+	Port         string
+	User         string
+	Password     string
+	Database     string
+	SqlString    string
+	Param        []interface{}
+	Rows         *sql.Rows
+	Err          error
+	Transaction  *sql.Tx
+	Fields       MigrateStructure
+	TableAttr    TableAttr
+	PrimaryIndex string
+	UniqueIndex  []UniqueIndex
+	Index        []Index
+	Migrate      []MigrateStructure
 }
 
 func NewMysql(host string, port string, user string, password string, db string) *MysqlStructure {
@@ -282,19 +289,21 @@ type MigrateStructure struct {
 
 /*数据迁移 字段属性*/
 type FieldsAttr struct {
-	Type string
-	Json string
-	Auto string
-	Null string
-	Default string
-	Hidden string
+	Type        string
+	Json        string
+	Auto        string
+	Null        string
+	Default     string
+	Hidden      string
+	UniqueIndex string
+	Index       string
 }
 
 /*数据迁移 表属性*/
 type TableAttr struct {
-	Engine string
-	AutoIncrement string
-	DEFAULT string
+	ENGINE         string
+	AUTO_INCREMENT string
+	DEFAULT        string
 }
 
 /*主索引*/
@@ -302,30 +311,131 @@ var PrimaryIndex string
 
 /*唯一索引*/
 type UniqueIndex struct {
-	Name string
+	Name  string
 	Index []string
 }
 
 /*普通索引*/
 type Index struct {
-	Name string
+	Name  string
 	Index []string
 }
 
-
-func (mysql *MysqlStructure)AutoMigrate(data interface{}) {
+func (mysql *MysqlStructure) AutoMigrate(data interface{}) error {
 	tableName := mysql.snakeString(reflect.TypeOf(data).Elem().Name())
-	fields := mysql.GetStructureFields(data)
-	fmt.Println(tableName, fields)
+	if err := mysql.GetStructureFields(data); err != nil {
+		return err
+	}
+
+	/*遍历Migrate,生成SQL string*/
+	var sqlSlice []string
+	var sql string
+	for _, v := range mysql.Migrate {
+		sql = fmt.Sprintf("`%s`", v.Field)
+		if v.Type != "" {
+			sql += " " + v.Type
+		}
+
+		if v.Null != "true" {
+			sql += " NOT NULL"
+		}
+
+		if v.Type == "timestamp" && v.Default == "now()" {
+			sql += " DEFAULT CURRENT_TIMESTAMP"
+		} else if v.Type == "timestamp" && v.Default == "update_now()" {
+			sql += " DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+		} else if v.Default != "" {
+			sql += " DEFAULT " + v.Default
+		}
+
+		if v.Auto == "true" {
+			sql += " AUTO_INCREMENT"
+		}
+		sqlSlice = append(sqlSlice, sql)
+	}
+
+	/*补充主键*/
+	if mysql.PrimaryIndex != "" {
+		sqlSlice = append(sqlSlice, fmt.Sprintf("PRIMARY KEY (`%s`)", mysql.PrimaryIndex))
+	}
+
+	/*补充唯一索引*/
+	uniqueIndex := mysql.GetUniqueIndexMap()
+	if mysql.UniqueIndex != nil {
+		for i, v := range uniqueIndex {
+			sql = fmt.Sprintf("UNIQUE KEY `%s` (%s)", i, strings.Join(v, ","))
+			sqlSlice = append(sqlSlice, sql)
+		}
+	}
+
+	/*补充普通索引*/
+	index := mysql.GetIndexMap()
+	if mysql.UniqueIndex != nil {
+		for i, v := range index {
+			sql = fmt.Sprintf("KEY `%s` (%s)", i, strings.Join(v, ","))
+			sqlSlice = append(sqlSlice, sql)
+		}
+	}
+
+	/*表属性，先写死，后期根据需要修改*/
+	tableAttr := &TableAttr{
+		ENGINE:         "InnoDB",
+		AUTO_INCREMENT: "0",
+		DEFAULT:        "CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci",
+	}
+	taValue := reflect.ValueOf(tableAttr).Elem()
+
+	var tabString string
+	for i := 0; i < taValue.NumField(); i++ {
+		tv := taValue.Field(i).String()
+		tn := reflect.TypeOf(tableAttr).Elem().Field(i).Name
+		if tn == "DEFAULT" {
+			tabString += fmt.Sprintf("%s %s ", tn, tv)
+		} else {
+			tabString += fmt.Sprintf("%s=%s ", tn, tv)
+		}
+	}
+
+	sql = fmt.Sprintf("CREATE TABLE `%s` ( %s ) %s", tableName, strings.Join(sqlSlice, ","), tabString)
+	fmt.Println(sql)
+	return nil
 }
 
-func (mysql *MysqlStructure)GetStructureFields(data interface{}) []MigrateStructure {
+/*获取索引MAP*/
+func (mysql *MysqlStructure) GetUniqueIndexMap() map[string][]string {
+	uniqueIndex := make(map[string][]string)
+
+	for _, v := range mysql.UniqueIndex {
+		if uniqueIndex[v.Index[0]] != nil {
+			uniqueIndex[v.Index[0]] = append(uniqueIndex[v.Index[0]], fmt.Sprintf("`%s`", v.Name))
+		} else {
+			uniqueIndex[v.Index[0]] = []string{fmt.Sprintf("`%s`", v.Name)}
+		}
+	}
+	return uniqueIndex
+}
+
+/*获取索引MAP*/
+func (mysql *MysqlStructure) GetIndexMap() map[string][]string {
+	uniqueIndex := make(map[string][]string)
+
+	for _, v := range mysql.Index {
+		if uniqueIndex[v.Index[0]] != nil {
+			uniqueIndex[v.Index[0]] = append(uniqueIndex[v.Index[0]], fmt.Sprintf("`%s`", v.Name))
+		} else {
+			uniqueIndex[v.Index[0]] = []string{fmt.Sprintf("`%s`", v.Name)}
+		}
+	}
+	return uniqueIndex
+}
+
+func (mysql *MysqlStructure) GetStructureFields(data interface{}) error {
 	t := reflect.TypeOf(data).Elem()
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
-		log.Println("Check type error not Struct")
+		return errors.New("Check type error not Struct")
 	}
 	fieldNum := t.NumField()
 
@@ -334,23 +444,44 @@ func (mysql *MysqlStructure)GetStructureFields(data interface{}) []MigrateStruct
 		tag := t.Field(i).Tag
 		fieldName := mysql.snakeString(t.Field(i).Name)
 		mRow := MigrateStructure{
-			Field:fieldName,
+			Field: fieldName,
 			FieldsAttr: FieldsAttr{
-				Type:    tag.Get("type"),
-				Json:    tag.Get("json"),
-				Auto:    tag.Get("auto"),
-				Null:    tag.Get("null"),
-				Default: tag.Get("default"),
-				Hidden:  tag.Get("hidden"),
+				Type:        tag.Get("type"),
+				Json:        tag.Get("json"),
+				Auto:        tag.Get("auto"),
+				Null:        tag.Get("null"),
+				Default:     tag.Get("default"),
+				Hidden:      tag.Get("hidden"),
+				UniqueIndex: tag.Get("unique_index"),
+				Index:       tag.Get("index"),
 			},
 		}
-		migrate = append(migrate,mRow)
+		if mRow.FieldsAttr.Auto == "true" {
+			mysql.PrimaryIndex = fieldName
+		}
+
+		if mRow.FieldsAttr.UniqueIndex != "" {
+			mysql.UniqueIndex = append(mysql.UniqueIndex, UniqueIndex{
+				Name:  fieldName,
+				Index: []string{mRow.FieldsAttr.UniqueIndex},
+			})
+		}
+
+		if mRow.FieldsAttr.Index != "" {
+			mysql.Index = append(mysql.Index, Index{
+				Name:  fieldName,
+				Index: []string{mRow.FieldsAttr.Index},
+			})
+		}
+
+		migrate = append(migrate, mRow)
 	}
-	return migrate
+	mysql.Migrate = migrate
+	return nil
 }
 
 /*驼峰命名转蛇形*/
-func (mysql *MysqlStructure)snakeString(s string) string {
+func (mysql *MysqlStructure) snakeString(s string) string {
 	data := make([]byte, 0, len(s)*2)
 	j := false
 	num := len(s)
