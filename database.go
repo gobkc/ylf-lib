@@ -134,6 +134,57 @@ func (mysql *MysqlStructure) RollBack() error {
 	return nil
 }
 
+func (mysql *MysqlStructure) SaveAll(data interface{}, fields ...interface{}) error {
+	var rowValue []string
+	var allRows []string
+
+	var fieldsArr []string
+	var updateFieldsArr []string
+	dataElem := reflect.ValueOf(data).Elem()
+	var tableName string
+	for i := 0; i < dataElem.Len(); i++ {
+		rowKeyLen := dataElem.Index(i).NumField()
+		rowValue = []string{}
+		for rowKey := 0; rowKey < rowKeyLen; rowKey++ {
+			dataType := reflect.TypeOf(dataElem.Index(i).Interface())
+			defaultTag := dataType.Field(rowKey).Tag.Get("default")
+			fName := mysql.snakeString(dataType.Field(rowKey).Name)
+			rowV := dataElem.Index(i).Field(rowKey).Interface()
+
+			/*如果结构体tag中找到now或update_now,或则此字段不在fields中,都不会对此字段做任何操作*/
+			if defaultTag == "now()" || defaultTag == "update_now()" || InSlice(fields, fName) == false {
+				continue
+			}
+
+			/*只有第一行数据，用来取出字段名，表名等信息*/
+			if i == 0 {
+				fieldsArr = append(fieldsArr, fmt.Sprintf("`%s`", fName))
+				updateFieldsArr = append(updateFieldsArr, fmt.Sprintf("%s = VALUES(%s)", fName, fName))
+				tableName = mysql.snakeString(reflect.TypeOf(dataElem.Index(i).Interface()).Name())
+			}
+			rowValue = append(rowValue, fmt.Sprintf("'%v'", rowV))
+		}
+		allRows = append(allRows, fmt.Sprintf("(%s)", strings.Join(rowValue, ",")))
+	}
+
+	if tableName == "" {
+		return errors.New("数据格式不正确")
+	}
+
+	sql := fmt.Sprintf("INSERT INTO `%s`(%s) VALUES %s ON DUPLICATE KEY UPDATE %s",
+		tableName,
+		strings.Join(fieldsArr, ","),
+		strings.Join(allRows, ","),
+		strings.Join(updateFieldsArr, ","),
+	)
+
+	if _, err := mysql.Sql(sql).Insert(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (mysql *MysqlStructure) Insert() (lastId int64, err error) {
 	var prepare *sql.Stmt
 	if mysql.Transaction != nil {
@@ -157,6 +208,10 @@ func (mysql *MysqlStructure) Insert() (lastId int64, err error) {
 	log.Println("影响行数：", aff)
 	lastId, _ = res.LastInsertId()
 	return lastId, nil
+}
+
+func (mysql *MysqlStructure) Exec() (result int64, err error) {
+	return mysql.Update()
 }
 
 func (mysql *MysqlStructure) Update() (affected int64, err error) {
@@ -297,6 +352,7 @@ type FieldsAttr struct {
 	Hidden      string
 	UniqueIndex string
 	Index       string
+	Comment     string
 }
 
 /*数据迁移 表属性*/
@@ -321,7 +377,18 @@ type Index struct {
 	Index []string
 }
 
-func (mysql *MysqlStructure) AutoMigrate(data interface{}) error {
+/*批量迁移数据表*/
+func (mysql *MysqlStructure) AutoMigrate(data ...interface{}) error {
+	for _, v := range data {
+		if err := mysql.MigrateOne(v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+/*迁移单个数据表*/
+func (mysql *MysqlStructure) MigrateOne(data interface{}) error {
 	tableName := mysql.snakeString(reflect.TypeOf(data).Elem().Name())
 	if err := mysql.GetStructureFields(data); err != nil {
 		return err
@@ -350,6 +417,10 @@ func (mysql *MysqlStructure) AutoMigrate(data interface{}) error {
 
 		if v.Auto == "true" {
 			sql += " AUTO_INCREMENT"
+		}
+
+		if v.Comment != "" {
+			sql += fmt.Sprintf(" COMMENT '%s'", v.Comment)
 		}
 		sqlSlice = append(sqlSlice, sql)
 	}
@@ -396,9 +467,38 @@ func (mysql *MysqlStructure) AutoMigrate(data interface{}) error {
 		}
 	}
 
-	sql = fmt.Sprintf("CREATE TABLE `%s` ( %s ) %s", tableName, strings.Join(sqlSlice, ","), tabString)
-	fmt.Println(sql)
+	sql = fmt.Sprintf("CREATE TABLE IF NOT EXISTS `%s` ( %s ) %s", tableName, strings.Join(sqlSlice, ","), tabString)
+	if _, err := mysql.Sql(sql).Exec(); err != nil {
+		return err
+	}
+	mysql.ClearData()
 	return nil
+}
+
+func (mysql *MysqlStructure) ClearData() {
+	//SqlString    string
+	//Param        []interface{}
+	//Rows         *sql.Rows
+	//Err          error
+	//Transaction  *sql.Tx
+	//Fields       MigrateStructure
+	//TableAttr    TableAttr
+	//PrimaryIndex string
+	//UniqueIndex  []UniqueIndex
+	//Index        []Index
+	//Migrate      []MigrateStructure
+
+	mysql.SqlString = ""
+	mysql.Param = nil
+	mysql.Rows = nil
+	mysql.Err = nil
+	mysql.Transaction = nil
+	mysql.Fields = MigrateStructure{}
+	mysql.TableAttr = TableAttr{}
+	mysql.PrimaryIndex = ""
+	mysql.UniqueIndex = nil
+	mysql.Index = nil
+	mysql.Migrate = nil
 }
 
 /*获取索引MAP*/
@@ -454,6 +554,7 @@ func (mysql *MysqlStructure) GetStructureFields(data interface{}) error {
 				Hidden:      tag.Get("hidden"),
 				UniqueIndex: tag.Get("unique_index"),
 				Index:       tag.Get("index"),
+				Comment:     tag.Get("comment"),
 			},
 		}
 		if mRow.FieldsAttr.Auto == "true" {
