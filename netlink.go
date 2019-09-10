@@ -29,6 +29,30 @@ func AddIpToEth(eth string, ip string) error {
 	return nil
 }
 
+/*获取随机MAC地址*/
+func GetRandMac() string {
+	//generator mac addr
+	var m [6]byte
+
+	rand.Seed(time.Now().UnixNano())
+	for i := 0; i < 6; i++ {
+		mac_byte := rand.Intn(256)
+		m[i] = byte(mac_byte)
+
+		rand.Seed(int64(mac_byte))
+	}
+	return fmt.Sprintf("00:35:5d:%02x:%02x:%02x", m[3], m[4], m[5])
+}
+
+/*杀掉指定pid*/
+func KillPid(pid string) error {
+	cli := exec.Command("bash", "-c", "kill -9 "+pid)
+	if _, err := cli.Output(); err != nil {
+		return errors.New(pid + "进程不存在或已经被杀掉了")
+	}
+	return nil
+}
+
 /*添加网桥*/
 func AddBridge(bridgeName string) error {
 	la := netlink.NewLinkAttrs()
