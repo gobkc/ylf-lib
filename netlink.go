@@ -7,6 +7,7 @@ import (
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"reflect"
@@ -42,15 +43,6 @@ func GetRandMac() string {
 		rand.Seed(int64(mac_byte))
 	}
 	return fmt.Sprintf("00:35:5d:%02x:%02x:%02x", m[3], m[4], m[5])
-}
-
-/*杀掉指定pid*/
-func KillPid(pid string) error {
-	cli := exec.Command("bash", "-c", "kill -9 "+pid)
-	if _, err := cli.Output(); err != nil {
-		return errors.New(pid + "进程不存在或已经被杀掉了")
-	}
-	return nil
 }
 
 /*添加网桥*/
@@ -203,7 +195,7 @@ func AddMacVLan(devName string, parentDevName string, macAddr string) error {
 
 	/*启用macVLan*/
 	if err = netlink.LinkSetUp(&macVLan); err != nil {
-		return errors.New("在启用macvlan时报错:" + err.Error())
+		return errors.New("在启用macvlan时报错:" + devName + " " + err.Error())
 	}
 
 	return nil
@@ -406,4 +398,3 @@ func WriteRtTable(str string) error {
 
 	return nil
 }
-
