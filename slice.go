@@ -1,7 +1,5 @@
 package ylf
 
-import "fmt"
-
 func SliceMap(slice []interface{}, cb func(interface{}) interface{}) []interface{} {
 	dup := make([]interface{}, len(slice))
 
@@ -12,15 +10,4 @@ func SliceMap(slice []interface{}, cb func(interface{}) interface{}) []interface
 	}
 
 	return dup
-}
-
-func InSlice(slice []interface{}, value interface{}) bool {
-	for _, row := range slice {
-		realRow := fmt.Sprintf("%v", row)
-		realValue := fmt.Sprintf("%v", value)
-		if realRow == realValue {
-			return true
-		}
-	}
-	return false
 }
