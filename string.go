@@ -37,3 +37,9 @@ func ExpFind(rule string, srcString string) string {
 	}
 	return ""
 }
+
+func ExpFindAll(rule string, srcString string) []string {
+	re := regexp.MustCompile(rule)
+	find := re.FindStringSubmatch(srcString)
+	return find
+}
