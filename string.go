@@ -3,6 +3,7 @@ package ylf
 import (
 	"github.com/satori/go.uuid"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -26,4 +27,13 @@ func Rand() string {
 	rand.Seed(time.Now().UnixNano())
 	num := rand.Intn(10000)
 	return GetRandomString(4) + strconv.Itoa(num)
+}
+
+func ExpFind(rule string, srcString string) string {
+	re := regexp.MustCompile(rule)
+	find := re.FindStringSubmatch(srcString)
+	if find != nil && len(find) > 1 {
+		return find[1]
+	}
+	return ""
 }

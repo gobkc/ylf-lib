@@ -1,8 +1,11 @@
 package ylf
 
 import (
+	"errors"
 	"github.com/fsnotify/fsnotify"
+	"io/ioutil"
 	"log"
+	"path/filepath"
 )
 
 type FsNotifyInterface interface {
@@ -64,4 +67,42 @@ func StartWatch(path string, fs FsNotifyInterface) {
 		}
 		select {}
 	}(path)
+}
+
+
+type PppLogInfo struct {
+	PppError string
+	Ppp      string
+	Local    string
+	Remote   string
+	Dns1     string
+	Dns2     string
+}
+
+func GetLogIp(path string) (result PppLogInfo, err error) {
+	fileC, err := ioutil.ReadFile(path)
+	if err != nil {
+		return result, err
+	}
+
+	f := string(fileC)
+
+	result.Ppp = ExpFind(`interface (.*)\n`, f)
+	result.Local = ExpFind(`local  IP address (.*)\n`, f)
+	result.Remote = ExpFind(`remote IP address (.*)\n`, f)
+	result.Dns1 = ExpFind(`remote IP address (.*)\n`, f)
+	result.Dns2 = ExpFind(`secondary DNS address (.*)\n*`, f)
+	result.PppError = ExpFind(`Connect.*\n([^\f]*)Connection`, f)
+	if result.PppError != "" {
+		err = errors.New(result.PppError)
+	}
+	return result, err
+}
+
+func GetFileByPath(path string) string {
+	fullFileName := filepath.Base(path)
+	if len(fullFileName) > 4 {
+		return string([]byte(fullFileName)[:len(fullFileName)-4])
+	}
+	return ""
 }
