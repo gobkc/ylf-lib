@@ -325,7 +325,6 @@ func (mysql *MysqlStructure) Select(data interface{}) error {
 				fmt.Println("do nothing")
 			}
 		}
-
 		val = reflect.Append(val, dataElem)
 	}
 	rows.Close()

@@ -1,7 +1,6 @@
 package ylf
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"github.com/vishvananda/netlink"
@@ -9,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"os"
 	"reflect"
 	"time"
 )
@@ -378,23 +376,4 @@ func StructureToString(iFace interface{}) string {
 		rStr = rStr + "\n"
 	}
 	return rStr
-}
-
-/*写入字符串到rt table*/
-func WriteRtTable(str string) error {
-	rtTablePath := "/etc/iproute2/rt_tables"
-	f, err := os.Create(rtTablePath)
-	if err != nil {
-		return errors.New("在打开rt_table表时发生错误:" + err.Error())
-	}
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
-	_, err = w.WriteString(str)
-	if err != nil {
-		return errors.New("在写入rt_table表时发生错误:" + err.Error())
-	}
-	w.Flush()
-
-	return nil
 }
