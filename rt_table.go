@@ -43,10 +43,10 @@ func GetRtTableAll() ([]RtTables, error) {
 }
 
 /*同步RT TABLE设置 存在则更新，不存在则新增*/
-func SynRtTableItem(tableName ...string) ([]RtTables, error) {
+func SynRtTableItem(tableName ...string) ([]RtTables, map[int]string, error) {
 	rtTables, err := GetRtTableAll()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	/*建立 rtTable的map映射*/
@@ -80,7 +80,7 @@ func SynRtTableItem(tableName ...string) ([]RtTables, error) {
 		} else if canUseIndex != -1 {
 			rtMap[canUseIndex] = rows
 		} else {
-			return nil, errors.New("rt tables已经没有足够的可使用地址")
+			return nil, nil, errors.New("rt tables已经没有足够的可使用地址")
 		}
 	}
 
@@ -92,14 +92,16 @@ func SynRtTableItem(tableName ...string) ([]RtTables, error) {
 				TableId:   strconv.Itoa(k),
 				TableName: v,
 			})
+		} else {
+			delete(rtMap, k)
 		}
 	}
 
 	if err := WriteRtTable(rtTables); err != nil {
-		return rtTables, err
+		return rtTables, rtMap, err
 	}
 
-	return rtTables, nil
+	return rtTables, rtMap, nil
 }
 
 func DeleteRtTableItem(tableName ...string) ([]RtTables, error) {
