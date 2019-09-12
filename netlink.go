@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"reflect"
 	"time"
 )
 
@@ -325,55 +324,4 @@ func SetPPPOE(eth string, ruleTableID int) error {
 		netlink.RuleAdd(rule)
 	}
 	return nil
-}
-
-/*RT table的数据结构,只能是这个样子*/
-type RtTableStructure struct {
-	TableId   string
-	TableName string
-}
-
-/*批量设置rtTable*/
-func BatchSetRtTable(rtTables []RtTableStructure) error {
-	/*rtTables默认的值，一定不能少的内容*/
-	rtTables = append(rtTables, []RtTableStructure{
-		{
-			"0",
-			"unspec",
-		},
-		{
-			"253",
-			"default",
-		},
-		{
-			"254",
-			"main",
-		},
-		{
-			"255",
-			"local",
-		},
-	}...)
-	rtString := StructureToString(&rtTables)
-
-	/*写入rt table*/
-	if err := WriteRtTable(rtString); err != nil {
-		return err
-	}
-	return nil
-}
-
-/*通过反射 结构体转字符串*/
-func StructureToString(iFace interface{}) string {
-	m := reflect.ValueOf(iFace).Elem()
-	var rStr string
-	for i := 0; i < m.Len(); i++ {
-		rowKeyLen := m.Index(i).NumField()
-		for rowKey := 0; rowKey < rowKeyLen; rowKey++ {
-			rowV := m.Index(i).Field(rowKey).String()
-			rStr = rStr + " " + rowV
-		}
-		rStr = rStr + "\n"
-	}
-	return rStr
 }

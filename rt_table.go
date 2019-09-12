@@ -43,7 +43,7 @@ func GetRtTableAll() ([]RtTables, error) {
 }
 
 /*同步RT TABLE设置 存在则更新，不存在则新增*/
-func SynRtTableItem(tableName ...string) ([]RtTables, map[int]string, error) {
+func SynRtTableItem(tableName ...string) ([]RtTables, map[string]int, error) {
 	rtTables, err := GetRtTableAll()
 	if err != nil {
 		return nil, nil, err
@@ -86,22 +86,22 @@ func SynRtTableItem(tableName ...string) ([]RtTables, map[int]string, error) {
 
 	/*map转结构体*/
 	rtTables = []RtTables{}
+	newRtMap := make(map[string]int)
 	for k, v := range rtMap {
 		if v != "" {
 			rtTables = append(rtTables, RtTables{
 				TableId:   strconv.Itoa(k),
 				TableName: v,
 			})
-		} else {
-			delete(rtMap, k)
+			newRtMap[v] =k
 		}
 	}
 
 	if err := WriteRtTable(rtTables); err != nil {
-		return rtTables, rtMap, err
+		return rtTables, newRtMap, err
 	}
 
-	return rtTables, rtMap, nil
+	return rtTables, newRtMap, nil
 }
 
 func DeleteRtTableItem(tableName ...string) ([]RtTables, error) {
