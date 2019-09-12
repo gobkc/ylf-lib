@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"reflect"
 	"time"
 )
 
@@ -245,13 +246,28 @@ func AddRule(src string, tableID int, fref int) error {
 
 /*使用eth获取Mac地址*/
 func GetMacByEth(eth string) (string, error) {
-	net, err := net.InterfaceByName(eth)
+	n, err := net.InterfaceByName(eth)
 	if err != nil {
 		fmt.Println(err)
 		return "", err
 	}
-	mac := net.HardwareAddr.String()
+	mac := n.HardwareAddr.String()
 	return mac, nil
+}
+
+func GetIpByEth(eth string) (string, error) {
+	n, err := net.InterfaceByName(eth)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	ipAddrs, _ := n.Addrs()
+	for _, v := range ipAddrs {
+		if ipNet, ok := v.(*net.IPNet); ok && !ipNet.IP.IsLoopback() && ipNet.IP.To4() != nil {
+			return ipNet.IP.String(), nil
+		}
+	}
+	return "", errors.New("没有找到IP")
 }
 
 /*添加DNS*/
@@ -324,4 +340,19 @@ func SetPPPOE(eth string, ruleTableID int) error {
 		netlink.RuleAdd(rule)
 	}
 	return nil
+}
+
+/*通过反射 结构体转字符串*/
+func StructureToString(iFace interface{}) string {
+	m := reflect.ValueOf(iFace).Elem()
+	var rStr string
+	for i := 0; i < m.Len(); i++ {
+		rowKeyLen := m.Index(i).NumField()
+		for rowKey := 0; rowKey < rowKeyLen; rowKey++ {
+			rowV := m.Index(i).Field(rowKey).String()
+			rStr = rStr + " " + rowV
+		}
+		rStr = rStr + "\n"
+	}
+	return rStr
 }
