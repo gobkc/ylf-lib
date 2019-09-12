@@ -9,6 +9,8 @@ import (
 	"math/rand"
 	"net"
 	"reflect"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -225,7 +227,7 @@ func AddRule(src string, tableID int, fref int) error {
 	var err error
 
 	/*分割字符串IP地址.使之符合要求*/
-	_, srcIpNet, err := net.ParseCIDR(src)
+	_, srcIpNet, err := net.ParseCIDR(fmt.Sprintf("%s/%s",src,"32"))
 	if err != nil {
 		return errors.New("添加策略时，因分割字符串转ipNet时发生错误")
 	}
