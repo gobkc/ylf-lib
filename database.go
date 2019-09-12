@@ -152,7 +152,11 @@ func (mysql *MysqlStructure) SaveAll(data interface{}, fields ...interface{}) er
 			rowV := dataElem.Index(i).Field(rowKey).Interface()
 
 			/*如果结构体tag中找到now或update_now,或则此字段不在fields中,都不会对此字段做任何操作*/
-			if defaultTag == "now()" || defaultTag == "update_now()" || InSlice(fields, fName) == false {
+			if fields != nil && InSlice(fields, fName) == false{
+				continue
+			}
+
+			if defaultTag == "now()" || defaultTag == "update_now()"{
 				continue
 			}
 
