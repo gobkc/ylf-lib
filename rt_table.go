@@ -123,7 +123,7 @@ func DeleteRtTableItem(tableName ...string) ([]RtTables, error) {
 }
 
 func WriteRtTable(rtTables [] RtTables) error {
-	strData := ylf.STRUCToString(&rtTables)
+	strData := STRUCToString(&rtTables)
 
 	rtTablePath := "/etc/iproute2/rt_tables"
 	f, err := os.Create(rtTablePath)
