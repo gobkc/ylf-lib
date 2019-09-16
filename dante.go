@@ -48,7 +48,7 @@ func NewDante(templatePath ...string) *DanteStructure {
 		realTempPath = templatePath[0]
 	} else {
 		currentDirectory := filepath.Dir(CurrentFile())
-		realTempPath = currentDirectory + "/dante-template/dante.conf"
+		realTempPath = currentDirectory + "/dante.conf"
 	}
 
 	/*初始化的时候提供默认值*/
