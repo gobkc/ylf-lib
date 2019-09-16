@@ -1,1 +1,0 @@
-Dante template directory

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"text/template"
@@ -46,7 +47,8 @@ func NewDante(templatePath ...string) *DanteStructure {
 	if templatePath != nil && templatePath[0] != "" {
 		realTempPath = templatePath[0]
 	} else {
-		realTempPath = "./conf/dante.conf"
+		currentDirectory := filepath.Dir(CurrentFile())
+		realTempPath = currentDirectory + "/dante-template/dante.conf"
 	}
 
 	/*初始化的时候提供默认值*/
@@ -267,4 +269,12 @@ func (d *DanteStructure) getCurrentDirectory() string {
 		log.Fatal(err)
 	}
 	return strings.Replace(dir, "\\", "/", -1)
+}
+
+func CurrentFile() string {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		log.Println("Can not get current file info")
+	}
+	return file
 }
