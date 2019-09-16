@@ -54,7 +54,7 @@ func NewDante(templatePath ...string) *DanteStructure {
 	/*初始化的时候提供默认值*/
 	return &DanteStructure{
 		realTempPath,
-		"./account-conf",
+		"./dante",
 		"",
 		"root",
 		"nobody",
