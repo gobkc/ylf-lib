@@ -219,8 +219,8 @@ func replaceFileContent(filePath string, findStr string, replaceStr string) {
 }
 
 /*启动dante服务*/
-func (d *DanteStructure) StartDante(fileName interface{}, times float64, fc func(userId interface{}, status interface{}, resetUserId interface{}) error) *DanteStructure {
-	filePath := fmt.Sprintf("%s/%s/%v.conf", d.getCurrentDirectory(), d.SavePath, fileName)
+func (d *DanteStructure) StartDante(host string, port interface{}, userId interface{}, mac string, times float64, fc func(host interface{}, mac interface{}, status interface{}, resetUserId interface{}) error, danteFc func(host string, port int, userId int, status string, macVLanMac string, pid string) error, reDialFc func(host string, mac string) error) *DanteStructure {
+	filePath := fmt.Sprintf("%s/%s/%v.conf", d.getCurrentDirectory(), d.SavePath, host+mac)
 	cmdString := fmt.Sprintf("sockd -f %s", filePath)
 	log.Println("开始启动dante:", cmdString)
 
@@ -235,27 +235,37 @@ func (d *DanteStructure) StartDante(fileName interface{}, times float64, fc func
 	cmd.Stderr = &buf
 
 	cmd.Start()
-	fmt.Println("获取到当前子线程的PID:", cmd.Process.Pid)
+	pid := fmt.Sprintf("%v", cmd.Process.Pid)
+	fmt.Println("获取到当前dante子线程的PID:", pid)
 
+	/*同步danteRun的数据*/
+	danteFc(host, port.(int), userId.(int), "运行中", mac, pid)
+	/*只运行指定的时间*/
 	time.Sleep(time.Duration(times) * time.Minute)
 
 	/*停止进程*/
 	cancel()
 
 	/*停止子线程*/
-	d.StopDante(fileName)
-
-	/*释放数据库中的资源*/
-	if err := fc(fileName, 1, 0); err != nil {
+	if err := d.StopDante(host, mac); err != nil {
 		log.Println(err.Error())
 	}
 
+	/*释放数据库中的资源*/
+	if err := fc(host, mac, "运行中", 0); err != nil {
+		log.Println(err.Error())
+	}
+
+	/*同步dante表*/
+	danteFc(host, port.(int), userId.(int), "停止", mac, pid)
+	/*重拨*/
+	reDialFc(host, mac)
 	cmd.Wait()
 	return d
 }
 
-func (d *DanteStructure) StopDante(configFileName interface{}) error {
-	cli := exec.Command("bash", "-c", fmt.Sprintf("kill -9 $(ps -ef|grep sockd|grep  %v.conf|awk '{print $2}')", configFileName))
+func (d *DanteStructure) StopDante(host interface{}, mac interface{}) error {
+	cli := exec.Command("bash", "-c", fmt.Sprintf("kill -9 $(ps -ef|grep sockd|grep  %v%v.conf|awk '{print $2}')", host, mac))
 	if _, err := cli.Output(); err != nil {
 		return errors.New("服务已经被停止了")
 	}
