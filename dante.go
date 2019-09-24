@@ -219,7 +219,15 @@ func replaceFileContent(filePath string, findStr string, replaceStr string) {
 }
 
 /*启动dante服务*/
-func (d *DanteStructure) StartDante(host string, port interface{}, userId interface{}, mac string, times float64, fc func(host interface{}, mac interface{}, status interface{}, resetUserId interface{}) error, danteFc func(host string, port int, userId int, status string, macVLanMac string, pid string) error, reDialFc func(host string, mac string) error) *DanteStructure {
+func (d *DanteStructure) StartDante(
+	host string,
+	port int,
+	userId int,
+	mac string,
+	times float64,
+	fc func(host string, mac string, status string, resetUserId int) error,
+	danteFc func(host string, port int, userId int, status string, macVLanMac string, pid string) error,
+	reDialFc func(host string, mac string) error) *DanteStructure {
 	filePath := fmt.Sprintf("%s/%s/%v.conf", d.getCurrentDirectory(), d.SavePath, host+mac)
 	cmdString := fmt.Sprintf("sockd -f %s", filePath)
 	log.Println("开始启动dante:", cmdString)
@@ -239,7 +247,7 @@ func (d *DanteStructure) StartDante(host string, port interface{}, userId interf
 	fmt.Println("获取到当前dante子线程的PID:", pid)
 
 	/*同步danteRun的数据*/
-	danteFc(host, port.(int), userId.(int), "运行中", mac, pid)
+	danteFc(host, port, userId, "运行中", mac, pid)
 	/*只运行指定的时间*/
 	time.Sleep(time.Duration(times) * time.Minute)
 
@@ -257,7 +265,7 @@ func (d *DanteStructure) StartDante(host string, port interface{}, userId interf
 	}
 
 	/*同步dante表*/
-	danteFc(host, port.(int), userId.(int), "停止", mac, pid)
+	danteFc(host, port, userId, "停止", mac, pid)
 	/*重拨*/
 	reDialFc(host, mac)
 	cmd.Wait()
