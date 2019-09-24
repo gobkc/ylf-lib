@@ -220,6 +220,7 @@ func replaceFileContent(filePath string, findStr string, replaceStr string) {
 
 /*启动dante服务*/
 func (d *DanteStructure) StartDante(
+	danteConf string,
 	host string,
 	port int,
 	userId int,
@@ -228,7 +229,7 @@ func (d *DanteStructure) StartDante(
 	fc func(host string, mac string, status string, resetUserId int) error,
 	danteFc func(host string, port int, userId int, status string, macVLanMac string, pid string) error,
 	reDialFc func(host string, mac string) error) *DanteStructure {
-	filePath := fmt.Sprintf("%s/%s/%v.conf", d.getCurrentDirectory(), d.SavePath, host+mac)
+	filePath := fmt.Sprintf("%s/%s/%v.conf", d.getCurrentDirectory(), d.SavePath, danteConf)
 	cmdString := fmt.Sprintf("sockd -f %s", filePath)
 	log.Println("开始启动dante:", cmdString)
 
