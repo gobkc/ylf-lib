@@ -99,6 +99,19 @@ func GetLogIp(path string) (result PppLogInfo, err error) {
 	return result, err
 }
 
+func GetLogIp2(f string) (result PppLogInfo, err error) {
+	result.Ppp = ExpFind(`interface (.*)\n`, f)
+	result.Local = ExpFind(`local  IP address (.*)\n`, f)
+	result.Remote = ExpFind(`remote IP address (.*)\n`, f)
+	result.Dns1 = ExpFind(`remote IP address (.*)\n`, f)
+	result.Dns2 = ExpFind(`secondary DNS address (.*)\n*`, f)
+	result.PppError = ExpFind(`Connect.*\n([^\f]*)Connection`, f)
+	if result.PppError != "" {
+		err = errors.New(result.PppError)
+	}
+	return result, err
+}
+
 func GetFileByPath(path string) string {
 	fullFileName := filepath.Base(path)
 	if len(fullFileName) > 4 {
