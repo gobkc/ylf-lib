@@ -18,8 +18,8 @@ func BatchSetMacVlanAndPromisc(cmdString string) error {
 	return nil
 }
 
-func CheckPid(pid string) bool {
-	cmdString := fmt.Sprintf("ps -ef|grep %s|grep -v grep|awk '{print $2}'", pid)
+func CheckPid(pid interface{}) bool {
+	cmdString := fmt.Sprintf("ps -ef|grep %v|grep -v grep|awk '{print $2}'", pid)
 	cmd := exec.Command("bash", "-c", cmdString)
 
 	if result, _ := cmd.Output(); string(result) == "" {
@@ -45,7 +45,7 @@ func RunCmd(cmdString string, runFc RunFunc) {
 
 	go readBuf(&buf, cmd.Process.Pid, &cancel, runFc)
 	cmd.Wait()
-	if !checkPid(cmd.Process.Pid){
+	if !CheckPid(cmd.Process.Pid){
 		runFc(cmd.Process.Pid,buf.String())
 	}
 }
@@ -56,7 +56,7 @@ Loop:
 	for {
 		select {
 		case <-tick.C:
-			if checkPid(pid) {
+			if CheckPid(pid) {
 				fmt.Println("Pid:", pid)
 				fmt.Println(buff.String())
 				runFc(pid, buff.String())
@@ -66,15 +66,4 @@ Loop:
 			}
 		}
 	}
-}
-
-func checkPid(pid int) bool {
-	cmdString := fmt.Sprintf("ps -ef|grep %v|grep -v grep|awk '{print $2}'", pid)
-	cmd := exec.Command("bash", "-c", cmdString)
-
-	if result, _ := cmd.Output(); string(result) == "" {
-		return false
-	}
-
-	return true
 }
