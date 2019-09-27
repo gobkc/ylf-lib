@@ -38,8 +38,14 @@ func ExpFind(rule string, srcString string) string {
 	return ""
 }
 
-func ExpFindAll(rule string, srcString string) []string {
-	re := regexp.MustCompile(rule)
-	find := re.FindStringSubmatch(srcString)
-	return find
+func ExpFindLast(rule string, srcString string) string {
+	re,_ := regexp.CompilePOSIX(rule)
+	find := re.FindAllStringSubmatch(srcString,-1)
+	if findLen := len(find);findLen>1{
+		last := find[findLen-1]
+		if lastLen := len(last);lastLen>1{
+			return last[lastLen-1]
+		}
+	}
+	return ""
 }
