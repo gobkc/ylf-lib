@@ -90,7 +90,7 @@ func GetLogIp(path string) (result PppLogInfo, err error) {
 	result.Ppp = ExpFind(`interface (.*)\n`, f)
 	result.Local = ExpFind(`local  IP address (.*)\n`, f)
 	result.Remote = ExpFind(`remote IP address (.*)\n`, f)
-	result.Dns1 = ExpFind(`remote IP address (.*)\n`, f)
+	result.Dns1 = ExpFind(`primary   DNS address (.*)\n`, f)
 	result.Dns2 = ExpFind(`secondary DNS address (.*)\n*`, f)
 	result.PppError = ExpFind(`Connect.*\n([^\f]*)Connection`, f)
 	if result.PppError != "" {
@@ -103,7 +103,7 @@ func GetLogIp2(f string) (result PppLogInfo, err error) {
 	result.Ppp = ExpFindLast(`interface (.*)\n`, f)
 	result.Local = ExpFindLast(`local  IP address (.*)\n`, f)
 	result.Remote = ExpFindLast(`remote IP address (.*)\n`, f)
-	result.Dns1 = ExpFindLast(`remote IP address (.*)\n`, f)
+	result.Dns1 = ExpFindLast(`primary   DNS address (.*)\n`, f)
 	result.Dns2 = ExpFindLast(`secondary DNS address (.*)\n*`, f)
 	result.PppError = ExpFindLast(`Connect.*\n([^\f]*)Connection`, f)
 	if result.PppError != "" {

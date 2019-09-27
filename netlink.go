@@ -8,6 +8,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"os/exec"
 	"reflect"
 	"time"
 )
@@ -153,51 +154,63 @@ func SetDeviceIP(name string, ip string) error {
 	return netlink.AddrAdd(iFace, addr)
 }
 
-/*添加macVLan*/
-func AddMacVLan(devName string, parentDevName string, macAddr string) error {
-	var err error
-
-	/*根据设备名找到设备*/
-	link, err := netlink.LinkByName(parentDevName)
-	if err != nil {
-		return err
+/*添加macVLan 并给macVLan添加MAC地址*/
+func AddMacVLan(macVLanName string, eth string, macAddress string) error {
+	cmdString := fmt.Sprintf("ip link add link %s dev %s address %s type macvlan && ip link set %s up", eth, macVLanName, macAddress, macVLanName)
+	cmd := exec.Command("bash", "-c", cmdString)
+	if _, err := cmd.Output(); err != nil {
+		log.Println(errors.New("添加macVLan失败,详细原因:" + err.Error()))
+		return errors.New("添加macVLan失败,详细原因:" + err.Error())
 	}
-
-	mac, err := net.ParseMAC(macAddr)
-	if err != nil {
-		return errors.New("在添加macvlan时无法解析mac地址：" + err.Error())
-	}
-
-	mv := netlink.NewLinkAttrs()
-	mv.Name = devName
-	mv.ParentIndex = link.Attrs().Index
-	mv.HardwareAddr = mac
-
-	macVLan := netlink.Macvlan{
-		LinkAttrs: mv,
-		Mode:      netlink.MACVLAN_MODE_BRIDGE,
-	}
-
-	/*先删除同名的macVLan，防止出错*/
-	netlink.LinkDel(&macVLan)
-
-	/*添加macVLan*/
-	if err = netlink.LinkAdd(&macVLan); err != nil {
-		return errors.New("在添加macvlan时报错:" + err.Error())
-	}
-
-	err = netlink.LinkSetDown(&macVLan)
-	if err != nil {
-		return err
-	}
-
-	/*启用macVLan*/
-	if err = netlink.LinkSetUp(&macVLan); err != nil {
-		return errors.New("在启用macvlan时报错:" + devName + " " + err.Error())
-	}
-
 	return nil
 }
+
+//
+///*添加macVLan*/
+//func AddMacVLan(devName string, parentDevName string, macAddr string) error {
+//	var err error
+//
+//	/*根据设备名找到设备*/
+//	link, err := netlink.LinkByName(parentDevName)
+//	if err != nil {
+//		return err
+//	}
+//
+//	mac, err := net.ParseMAC(macAddr)
+//	if err != nil {
+//		return errors.New("在添加macvlan时无法解析mac地址：" + err.Error())
+//	}
+//
+//	mv := netlink.NewLinkAttrs()
+//	mv.Name = devName
+//	mv.ParentIndex = link.Attrs().Index
+//	mv.HardwareAddr = mac
+//
+//	macVLan := netlink.Macvlan{
+//		LinkAttrs: mv,
+//		Mode:      netlink.MACVLAN_MODE_BRIDGE,
+//	}
+//
+//	/*先删除同名的macVLan，防止出错*/
+//	netlink.LinkDel(&macVLan)
+//
+//	/*添加macVLan*/
+//	if err = netlink.LinkAdd(&macVLan); err != nil {
+//		return errors.New("在添加macvlan时报错:" + err.Error())
+//	}
+//
+//	err = netlink.LinkSetDown(&macVLan)
+//	if err != nil {
+//		return err
+//	}
+//
+//	/*启用macVLan*/
+//	if err = netlink.LinkSetUp(&macVLan); err != nil {
+//		return errors.New("在启用macvlan时报错:" + devName + " " + err.Error())
+//	}
+//
+//	return nil
+//}
 
 /*添加默认路由*/
 func AddDefaultRoute(ppp string, gatewayIp string, tableId int) error {
