@@ -156,7 +156,7 @@ func SetDeviceIP(name string, ip string) error {
 
 /*添加macVLan 并给macVLan添加MAC地址*/
 func AddMacVLan(macVLanName string, eth string, macAddress string) error {
-	cmdString := fmt.Sprintf("ip link add link %s dev %s address %s type macvlan && ip link set %s up", eth,macVLanName, macAddress, macVLanName)
+	cmdString := fmt.Sprintf("ip link add link %s dev %s address %s type macvlan", eth,macVLanName, macAddress)
 	cmd := exec.Command("bash", "-c", cmdString)
 	if _, err := cmd.Output(); err != nil {
 		log.Println("执行cmd报错：",cmdString)
