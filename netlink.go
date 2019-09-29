@@ -1,12 +1,12 @@
 package ylf
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	"log"
-	"math/rand"
 	"net"
 	"os/exec"
 	"reflect"
@@ -30,19 +30,15 @@ func AddIpToEth(eth string, ip string) error {
 }
 
 /*获取随机MAC地址*/
-func GetRandMac() string {
-	//generator mac addr
-	var m [6]byte
-
-	rand.Seed(time.Now().UnixNano())
-	for i := 0; i < 6; i++ {
-		mac_byte := rand.Intn(256)
-		m[i] = byte(mac_byte)
-
-		rand.Seed(int64(mac_byte))
+func GetRandMac() (mac string, err error) {
+	b := make([]byte, 6)
+	if _, err = rand.Read(b); err != nil {
+		return mac, err
 	}
-	return fmt.Sprintf("00:35:5d:%02x:%02x:%02x", m[3], m[4], m[5])
+	mac = fmt.Sprintf("00:%02x:%02x:%02x:%02x:%02x", b[1], b[2], b[3], b[4], b[5])
+	return mac, nil
 }
+
 
 /*添加网桥*/
 func AddBridge(bridgeName string) error {
