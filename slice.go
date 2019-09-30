@@ -1,6 +1,29 @@
 package ylf
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
+	"reflect"
+)
+
+func ArrayMap(data interface{}, fc func(i int, row interface{}) interface{}) error {
+	dataElem := reflect.ValueOf(data).Elem()
+	for i := 0; i < dataElem.Len(); i++ {
+		currentRow := dataElem.Index(i)
+		currentRowData := currentRow.Interface()
+		callBackRow := fc(i, currentRowData)
+		callBackRowData := reflect.ValueOf(callBackRow)
+		currentRow.Set(callBackRowData)
+	}
+
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(dataElem.Interface()); err != nil {
+		return err
+	}
+	gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(data)
+	return nil
+}
 
 func SliceMap(slice []interface{}, cb func(interface{}) interface{}) []interface{} {
 	dup := make([]interface{}, len(slice))
