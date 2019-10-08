@@ -64,3 +64,25 @@ func RemoveRepeatedElement(arr []string) (newArr []string) {
 	}
 	return
 }
+
+/*效率更高的去重函数 用法：RemoveRepeated(&noPassAccount)*/
+func RemoveRepeated(arr *[]string){
+	var newArr []string
+	newArr = make([]string, 0)
+	for i := 0; i < len(*arr); i++ {
+		repeat := false
+		for j := i + 1; j < len(*arr); j++ {
+			if (*arr)[i] == (*arr)[j] {
+				repeat = true
+				break
+			}
+		}
+		if !repeat {
+			newArr = append(newArr, (*arr)[i])
+		}
+	}
+	if newArr!=nil{
+		*arr = newArr
+	}
+	return
+}
