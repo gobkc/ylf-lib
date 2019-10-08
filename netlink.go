@@ -365,3 +365,24 @@ func StructureToString(iFace interface{}) string {
 	}
 	return rStr
 }
+
+/*获取可用的PPP*/
+func GetUsablePpp() string {
+	interfaces, _ := net.Interfaces()
+	pppMap := make(map[string]string)
+	for _, v := range interfaces {
+		iName := v.Name
+		ppp := ExpFind(`(ppp[\d]+)`, iName)
+		if ppp != "" {
+			pppMap[ppp] = ppp
+		}
+	}
+	for i := 0; i < 1000; i++ {
+		indexTag := fmt.Sprintf("ppp%v", i)
+		i++
+		if hasPpp := pppMap[indexTag]; hasPpp == "" {
+			return indexTag
+		}
+	}
+	return ""
+}
