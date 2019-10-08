@@ -41,9 +41,9 @@ func ExpFind(rule string, srcString string) string {
 func ExpFindLast(rule string, srcString string) string {
 	re,_ := regexp.CompilePOSIX(rule)
 	find := re.FindAllStringSubmatch(srcString,-1)
-	if findLen := len(find);findLen>1{
+	if findLen := len(find);findLen>=1{
 		last := find[findLen-1]
-		if lastLen := len(last);lastLen>1{
+		if lastLen := len(last);lastLen>=1{
 			return last[lastLen-1]
 		}
 	}
