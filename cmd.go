@@ -57,8 +57,8 @@ Loop:
 		select {
 		case <-tick.C:
 			if CheckPid(pid) {
-				fmt.Println("Pid:", pid)
-				fmt.Println(buff.String())
+				//fmt.Println("Pid:", pid)
+				//fmt.Println(buff.String())
 				runFc(pid, buff.String())
 				buff.Reset()
 			} else {
