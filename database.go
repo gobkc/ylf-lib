@@ -35,13 +35,14 @@ type MysqlStructure struct {
 
 func NewMysql(host string, port string, user string, password string, db string) *MysqlStructure {
 	connString := fmt.Sprintf("%s:%s@tcp(%s:%s)/", user, password, host, port)
-	conn, err := GetConn(connString)
+	other := "?charset=utf8&parseTime=True&loc=Local"
+	conn, err := GetConn(connString + other)
 	if err != nil {
 		log.Fatalln(err.Error())
 	} else {
 		SyncDb(conn, db)
 		/*同步数据库结束，重新链接*/
-		conn, _ = GetConn(connString + db)
+		conn, _ = GetConn(connString + db + other)
 	}
 	return &MysqlStructure{
 		DB:       conn,
@@ -152,11 +153,11 @@ func (mysql *MysqlStructure) SaveAll(data interface{}, fields ...interface{}) er
 			rowV := dataElem.Index(i).Field(rowKey).Interface()
 
 			/*如果结构体tag中找到now或update_now,或则此字段不在fields中,都不会对此字段做任何操作*/
-			if fields != nil && InSlice(fields, fName) == false{
+			if fields != nil && InSlice(fields, fName) == false {
 				continue
 			}
 
-			if defaultTag == "now()" || defaultTag == "update_now()"{
+			if defaultTag == "now()" || defaultTag == "update_now()" {
 				continue
 			}
 
