@@ -228,7 +228,16 @@ func (d *DanteStructure) StartDante(
 	times float64,
 	fc func(host string, mac string, status string, resetUserId int) error,
 	danteFc func(host string, port int, userId int, status string, macVLanMac string, pid string) error,
-	reDialFc func(host string, mac string) error) *DanteStructure {
+	reDialFc func(host string, macVLanOrMac string) (data struct {
+	Pid     string
+	MacVLan     string
+	Ppp         string
+	PppLocalIp  string
+	PppRemoteIp string
+	Dns1        string
+	Dns2        string
+	PppError    string
+}, err error)) *DanteStructure {
 	filePath := fmt.Sprintf("%s/%s/%v.conf", d.getCurrentDirectory(), d.SavePath, danteConf)
 	cmdString := fmt.Sprintf("sockd -f %s", filePath)
 	log.Println("开始启动dante:", cmdString)
